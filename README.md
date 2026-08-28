@@ -75,7 +75,30 @@ Codex CLI を入れた場合は `codex login` でブラウザ認証を済ませ�
 | APIキー・通知先 | 空 Enter でスキップ可。後から `crew keys` で追加できる |
 
 回答は `identity.yaml`(git 管理外)に保存され、`./bin/crew init` でいつでも作り直せる。
-ウィザードが終わると tmux の中で GMクルー(Claude Code)が立ち上がる。あとは普通に話しかけるだけ。
+ウィザードが終わると tmux の中で GMクルー(Claude Code)が立ち上がる。
+
+**初回起動時に出る確認画面**
+
+```
+New MCP server found in this project: codex
+  Use this MCP server
+❯ Use this and all future MCP servers in this project
+  Continue without using this MCP server
+```
+
+これは `.mcp.json` に定義した **Codex MCP サーバー**(coder クルーが実装を Codex に委譲するための接続)を
+使うかの確認。想定どおりの表示なので **「Use this MCP server」を選んで Enter**。
+
+| 選択肢 | 意味 |
+|---|---|
+| Use this MCP server | codex だけ許可(推奨。git pull で同期する運用では1本ずつ確認する方が安全) |
+| Use this and all future MCP servers… | 今後 `.mcp.json` に増えたサーバーも無確認で許可 |
+| Continue without using this MCP server | Codex 委譲なし。coder クルーが Claude 側で直接実装するフォールバックになる(動くが Claude の使用量を食う) |
+
+Codex 側でログインしていないと委譲が失敗する。その場合はいったん抜けて(`Ctrl+b → d` または `/exit`)、
+WSL で `codex login` を済ませてから `./bin/crew up` し直す。
+
+あとは普通に話しかけるだけ。
 
 ### 4. 日常の操作
 
