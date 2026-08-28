@@ -10,10 +10,27 @@ set -u
 payload="$(cat 2>/dev/null || true)"
 [ -n "${SECRET_GUARD_DISABLE:-}" ] && exit 0
 
-if command -v jq >/dev/null 2>&1; then
-  tool="$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null || true)"
-  cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
-  fp="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null || true)"
+# JSON 解析: python3(必須依存・最も堅牢) → jq(動作確認付き。壊れた jq は素通りさせない) → sed
+parsed=""
+if command -v python3 >/dev/null 2>&1; then
+  parsed="$(printf '%s' "$payload" | python3 -c '
+import json,sys
+try:
+    d=json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+ti=d.get("tool_input") or {}
+for v in (d.get("tool_name",""), ti.get("command",""), ti.get("file_path","")):
+    print(str(v).replace("\n"," "))
+' 2>/dev/null || true)"
+fi
+if [ -z "$parsed" ] && command -v jq >/dev/null 2>&1 && jq --version >/dev/null 2>&1; then
+  parsed="$(printf '%s' "$payload" | jq -r '[.tool_name // "", .tool_input.command // "", .tool_input.file_path // ""] | map(gsub("\n";" ")) | .[]' 2>/dev/null || true)"
+fi
+if [ -n "$parsed" ]; then
+  tool="$(printf '%s\n' "$parsed" | sed -n '1p')"
+  cmd="$(printf '%s\n' "$parsed" | sed -n '2p')"
+  fp="$(printf '%s\n' "$parsed" | sed -n '3p')"
 else
   p="$(printf '%s' "$payload" | tr '\n' ' ')"
   tool="$(printf '%s' "$p" | sed -n 's/.*"tool_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
@@ -39,7 +56,7 @@ case "$tool" in
     # a) .env 系の内容表示
     printf '%s' "$cmd" | grep -Eq "${BOUND}(cat|less|more|head|tail|bat|strings|nl|tac)[[:space:]]+[^|;&]*(\.env([[:space:]]|$|\.)|machines/[^[:space:]]*\.env)" && block "$cmd"
     # b) 秘密を解決して丸ごと出す config 系
-    printf '%s' "$cmd" | grep -Eq "${BOUND}docker([[:space:]]+|-)compose[[:space:]].*[[:space:]]config([[:space:]]|$)" && block "$cmd"
+    printf '%s' "$cmd" | grep -Eq "${BOUND}docker([[:space:]]+|-)compose[[:space:]]+([^|;&]*[[:space:]]+)?config([[:space:]]|$)" && block "$cmd"
     # c) 環境変数の無条件ダンプ
     printf '%s' "$cmd" | grep -Eq "${BOUND}(env|printenv|export|set)[[:space:]]*($|[|;&])" && block "$cmd"
     # d) 秘密変数の直接 echo / printf

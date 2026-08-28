@@ -42,7 +42,13 @@ else
   offer_install PyYAML "pip3 install --user pyyaml || pip3 install --break-system-packages pyyaml"
 fi
 check tmux   "tmux"       || offer_install tmux "sudo apt-get install -y tmux"
-check jq     "jq"         || echo "    (任意) secret guard の JSON 解析に使用。無くても sed で代替"
+if command -v jq >/dev/null 2>&1 && jq --version >/dev/null 2>&1; then
+  printf "  %-14s ${OK} %s\n" "jq" "$(command -v jq)"
+elif command -v jq >/dev/null 2>&1; then
+  printf "  %-14s ${NG} 存在するが動作しない(%s: 共有ライブラリ欠落?)。hook は python3 で解析するので影響なし\n" "jq" "$(command -v jq)"
+else
+  printf "  %-14s -  未インストール(任意。hook は python3 で解析)\n" "jq"
+fi
 
 echo "--- クルー候補(任意) ---"
 if ! check codex "codex CLI"; then
