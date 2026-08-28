@@ -31,7 +31,6 @@ Claude Code のネイティブ機能(サブエージェント / スキル / hook
 ```bash
 mkdir -p ~/projects
 git clone https://github.com/ayakashiromae/multi-crew-system.git ~/projects/multi-crew-system
-cd ~/projects/multi-crew-system
 ```
 
 **B) GitHub の「Code → Download ZIP」で取得**
@@ -41,16 +40,25 @@ cd ~/projects/multi-crew-system
 
 ```bash
 bash /mnt/c/Users/<名前>/Downloads/multi-crew-system/install.sh
-cd ~/projects/multi-crew-system
 ```
 
 配置後は Windows 側から `\\wsl.localhost\Ubuntu-24.04\home\<ユーザー名>\projects\multi-crew-system` で中身を見られる
 (ディストリ名は `wsl -l` で確認)。
 
+**配置したら、`crew` コマンドを PATH に通す(1回だけ)。** これで**どのフォルダにいても** `crew up` と打てる:
+
+```bash
+echo 'export PATH="$HOME/projects/multi-crew-system/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+crew help    # ← 表示されれば OK
+```
+
+> PATH を通さない場合は、以降の `crew ○○` を `~/projects/multi-crew-system/bin/crew ○○` と読み替える
+> (フルパスで呼べば、どのフォルダからでも動く。`./bin/crew` は配置先フォルダの中でしか動かないので注意)。
+
 ### 2. 環境診断(任意だが初回は推奨)
 
 ```bash
-./bin/crew doctor
+crew doctor
 ```
 
 足りないもの(tmux / PyYAML / Codex CLI など)を検出し、その場でインストールを提案する。
@@ -59,7 +67,7 @@ Codex CLI を入れた場合は `codex login` でブラウザ認証を済ませ�
 ### 3. 起動する
 
 ```bash
-./bin/crew up
+crew up
 ```
 
 初回はウィザードが走る。質問と答え方:
@@ -74,7 +82,7 @@ Codex CLI を入れた場合は `codex login` でブラウザ認証を済ませ�
 | worker の演出 | `crew` なら各クルーが報告の冒頭1行だけ一言添える |
 | APIキー・通知先 | 空 Enter でスキップ可。後から `crew keys` で追加できる |
 
-回答は `identity.yaml`(git 管理外)に保存され、`./bin/crew init` でいつでも作り直せる。
+回答は `identity.yaml`(git 管理外)に保存され、`crew init` でいつでも作り直せる。
 ウィザードが終わると tmux の中で GMクルー(Claude Code)が立ち上がる。
 
 **初回起動時に出る確認画面**
@@ -96,39 +104,37 @@ New MCP server found in this project: codex
 | Continue without using this MCP server | Codex 委譲なし。coder クルーが Claude 側で直接実装するフォールバックになる(動くが Claude の使用量を食う) |
 
 Codex 側でログインしていないと委譲が失敗する。その場合はいったん抜けて(`Ctrl+b → d` または `/exit`)、
-WSL で `codex login` を済ませてから `./bin/crew up` し直す。
+WSL で `codex login` を済ませてから `crew up` し直す。
 
 あとは普通に話しかけるだけ。
 
-### 4. 日常の操作
+### 4. 日常の操作(どのフォルダからでも可)
 
 ```bash
-./bin/crew up       # 出陣(2回目以降はウィザード無しで即起動)
-Ctrl+b → d          # デタッチ(抜けてもクルーは生きている)
-./bin/crew gm       # 再接続
-./bin/crew dash     # ダッシュボード(http://localhost:7777)を開く
-./bin/crew decide   # 判断待ちの一覧
-./bin/crew test     # 自己診断(設定生成・secret guard・git 管理外チェック)
-./bin/crew down     # 完全終了
-```
-
-`bin` を PATH に通しておくと `crew up` だけで済む:
-
-```bash
-echo 'export PATH="$HOME/projects/multi-crew-system/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+crew up       # 出陣(2回目以降はウィザード無しで即起動)
+Ctrl+b → d    # デタッチ(抜けてもクルーは生きている)
+crew gm       # 再接続
+crew dash     # ダッシュボード(http://localhost:7777)を開く
+crew decide   # 判断待ちの一覧
+crew test     # 自己診断(設定生成・secret guard・git 管理外チェック)
+crew down     # 完全終了
 ```
 
 ### 5. うまくいかないとき
 
 | 症状 | 見るところ |
 |---|---|
-| `identity.yaml が見つかりません` | `./bin/crew init` を実行 |
-| GM が環境定義を読めないと言う | `python3 scripts/gen_settings.py` を手で実行して `state/identity_context.md` ができるか確認 |
+| `identity.yaml が見つかりません` | `crew init` を実行 |
+| GM が環境定義を読めないと言う | `python3 ~/projects/multi-crew-system/scripts/gen_settings.py` を手で実行して `state/identity_context.md` ができるか確認 |
 | Codex に委譲されない | `codex login` 済みか、`.mcp.json` の `codex mcp-server` が手元の Codex CLI で動くか(`codex mcp-server --help`) |
 | hooks を変えたのに効かない | Claude Code を再起動(`crew down` → `crew up`) |
-| その他 | `./bin/crew test` の ✘ を読む |
+| `crew: command not found` | PATH が通っていない。上記 1. の `echo … >> ~/.bashrc && source ~/.bashrc` を実行するか、`~/projects/multi-crew-system/bin/crew up` とフルパスで打つ |
+| `./bin/crew: No such file or directory` | 配置先フォルダの外で `./bin/crew` と打っている。`crew up`(PATH 設定済み)か `~/projects/multi-crew-system/bin/crew up` にする |
+| その他 | `crew test` の ✘ を読む |
 
 ## コマンド一覧
+
+`crew` は PATH を通せばどこからでも、通さなければ `~/projects/multi-crew-system/bin/crew` で呼ぶ。
 
 ```
 crew up       出陣(同期 → 初回はウィザード → サービス起動 → GMクルー起動)
