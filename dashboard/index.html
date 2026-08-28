@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>multi-crew-system dashboard</title>
+<style>
+  :root{
+    --bg:#0f1115; --surface:#171a21; --border:#262b36;
+    --ink:#e8eaf0; --ink2:#9aa3b2; --ink3:#5f6878;
+    --accent:#4d9fff; --good:#3fbf7f; --warn:#e0a83a; --bad:#e0604d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font:14px/1.6 "SF Mono","Cascadia Code",Consolas,"Noto Sans Mono CJK JP",monospace;
+    padding:20px;max-width:1100px;margin:0 auto}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  h1{font-size:18px;letter-spacing:.04em}
+  h1 .dot{color:var(--accent)}
+  #meta{color:var(--ink2);font-size:12px}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .tile .label{font-size:11px;color:var(--ink2);letter-spacing:.06em}
+  .tile .value{font-size:26px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  .tile .sub{font-size:11px;color:var(--ink3)}
+  .controls{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  select{background:var(--surface);color:var(--ink);border:1px solid var(--border);
+    border-radius:6px;padding:5px 8px;font:inherit;font-size:12px}
+  .hint{font-size:11px;color:var(--ink3)}
+  .feedwrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{color:var(--ink3);font-weight:500;text-align:left;padding:8px 12px;
+    border-bottom:1px solid var(--border);font-size:11px;letter-spacing:.05em}
+  td{padding:6px 12px;border-bottom:1px solid var(--border);vertical-align:top;white-space:nowrap}
+  td.detail{white-space:normal;word-break:break-all;color:var(--ink2)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(77,159,255,.06)}
+  .badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;border:1px solid}
+  .b-Prompt{color:var(--accent);border-color:var(--accent)}
+  .b-Tool{color:var(--ink2);border-color:var(--border)}
+  .b-CrewDone{color:var(--good);border-color:var(--good)}
+  .b-TurnDone{color:var(--good);border-color:var(--border)}
+  .b-SessionStart{color:var(--warn);border-color:var(--warn)}
+  .b-default{color:var(--ink3);border-color:var(--border)}
+  .empty{padding:28px;text-align:center;color:var(--ink3)}
+  time.stale{color:var(--warn)}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px}
+  .panel h2{font-size:12px;color:var(--warn);letter-spacing:.06em;margin-bottom:6px}
+  .panel ul{list-style:none}
+  .panel li{padding:4px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
+  .panel li:last-child{border-bottom:none}
+  .panel li .id{color:var(--ink3);margin-right:8px}
+  .panel li .def{color:var(--ink3);font-size:11px;margin-left:8px}
+  .panel .none{color:var(--ink3);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="dot">●</span> <span id="title">crew dashboard</span></h1>
+  <span id="meta">loading…</span>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="label">今日のイベント</div><div class="value" id="t-events">–</div><div class="sub">events.jsonl(この拠点)</div></div>
+  <div class="tile"><div class="label">ツール実行(今日)</div><div class="value" id="t-tools">–</div><div class="sub">Tool イベント</div></div>
+  <div class="tile"><div class="label">クルー完了(今日)</div><div class="value" id="t-crews">–</div><div class="sub">CrewDone イベント</div></div>
+  <div class="tile"><div class="label">最終イベント</div><div class="value" id="t-last" style="font-size:16px">–</div><div class="sub" id="t-lastsub"></div></div>
+</div>
+
+<div class="panel">
+  <h2>🚨 判断待ち(非ブロッキング) — tools/decision.sh add / done</h2>
+  <ul id="decisions"><li class="none">なし</li></ul>
+</div>
+
+<div class="controls">
+  <select id="filter">
+    <option value="">すべてのイベント</option>
+    <option value="Prompt">Prompt(オペレーター発話)</option>
+    <option value="Tool">Tool(ツール実行)</option>
+    <option value="CrewDone">CrewDone(クルー完了)</option>
+    <option value="TurnDone">TurnDone(ターン完了)</option>
+    <option value="SessionStart">SessionStart</option>
+  </select>
+  <span class="hint">3秒ごとに自動更新 / データはこのPCローカル(state/)のみ</span>
+</div>
+
+<div class="feedwrap">
+  <table>
+    <thead><tr><th>時刻</th><th>イベント</th><th>ツール</th><th>内容</th></tr></thead>
+    <tbody id="feed"><tr><td colspan="4" class="empty">イベント待ち…(crew up 後にここへ流れます)</td></tr></tbody>
+  </table>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let events=[];
+function today(){return new Date().toISOString().slice(0,10)}
+function esc(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function badge(e){const known=["Prompt","Tool","CrewDone","TurnDone","SessionStart"];
+  const cls=known.includes(e)?"b-"+e:"b-default";
+  return `<span class="badge ${cls}">${esc(e)}</span>`}
+function render(){
+  const f=$("filter").value;
+  const rows=events.filter(e=>!f||e.event===f).slice(-200).reverse();
+  $("feed").innerHTML=rows.length?rows.map(e=>
+    `<tr><td>${esc((e.ts||"").replace("T"," "))}</td><td>${badge(e.event)}</td><td>${esc(e.tool||"")}</td><td class="detail">${esc(e.detail||"")}</td></tr>`
+  ).join(""):'<tr><td colspan="4" class="empty">該当イベントなし</td></tr>';
+  const t=today(), tod=events.filter(e=>(e.ts||"").startsWith(t));
+  $("t-events").textContent=tod.length;
+  $("t-tools").textContent=tod.filter(e=>e.event==="Tool").length;
+  $("t-crews").textContent=tod.filter(e=>e.event==="CrewDone").length;
+  const last=events[events.length-1];
+  if(last){$("t-last").textContent=(last.ts||"").slice(11);$("t-lastsub").textContent=last.event||""}
+}
+async function tick(){
+  try{
+    const r=await fetch("/api/events");events=await r.json();render();
+  }catch(e){/* サーバ停止中 */}
+}
+async function meta(){
+  try{
+    const m=await(await fetch("/api/meta")).json();
+    $("meta").textContent=`${m.operator||"?"}(${m.address_as||"-"}) @ ${m.org||"-"} / ${m.hostname||""} / theme: ${m.theme||"plain"} / worker: ${m.worker_flavor||"none"}`;
+    if(m.theme==="crew"){$("title").textContent="🛸 crew dashboard";document.title="🛸 multi-crew-system"}
+  }catch(e){$("meta").textContent="meta 未生成(crew init を実行)"}
+}
+async function decisions(){
+  try{
+    const d=await(await fetch("/api/decisions")).json();
+    $("decisions").innerHTML=d.length?d.map(r=>`<li><span class="id">#${esc(r.id)}</span>${esc(r.item)}${r.default?`<span class="def">先行既定値: ${esc(r.default)}</span>`:""}</li>`).join(""):'<li class="none">なし</li>';
+  }catch(e){}
+}
+meta();tick();decisions();setInterval(tick,3000);setInterval(decisions,5000);
+$("filter").addEventListener("change",render);
+</script>
+</body>
+</html>

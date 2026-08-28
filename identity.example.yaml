@@ -1,0 +1,54 @@
+# ============================================================
+# identity.yaml — この環境の「自分仕様」定義
+#
+# このファイルを identity.yaml としてコピーして使う(crew init が対話で生成します)。
+# identity.yaml は .gitignore 済み。シークレット(APIキー)はここには書かず、
+# machines/<hostname>.env に置くこと。
+# ============================================================
+
+operator:
+  name: your-name          # あなたの名前
+  address_as: 殿           # クルーからの呼ばれ方(例: 殿 / ボス / さん付け)
+  org: ""                  # この環境の所属(例: 個人事業の屋号 / 会社名)
+
+# この環境の役割・前提条件・注意事項。GMクルーの前提知識になる。
+context: |
+  (例)
+  個人事業の案件用の環境。動画制作と個人開発が中心。
+  会社の情報はこの環境では一切扱わない。
+
+paths:
+  outbox: ~/crew-out/review      # レビューしてほしい成果物の置き場
+  screenshots: ~/crew-out/shots  # スクリーンショットの排出先
+  workspace: ~/dev/sandbox       # クルーが新規作成してよいフォルダ
+  readable:                      # クルーが読み取ってよいフォルダ一覧
+    - ~/dev
+
+# themes/ 内のディレクトリ名。plain = 素のClaude / crew = Among Us風味(GMのみ適用)
+# crew を選ぶと、進行中表示のスピナー文言(✶ ○○中…)も themes/crew/spinner_verbs.json に置き換わる。
+theme: crew
+
+# worker(coder/research/chore/qc-*)の演出: none = 素 / crew = 報告冒頭1行にだけ色クルー/QMクルーの一言
+# (環境変数 CREW_WORKER_FLAVOR で各クルー定義に伝わる。コード・文書には混ざらない)
+worker_flavor: crew
+
+# クルー編成: 役割ごとに使うモデル/AI。crew init の環境診断が検出結果から提案する。
+# 使えないものは自動でフォールバックされる(coder: codex が無ければ sonnet)。
+roster:
+  gm: fable          # 窓口・設計・裁定(発話少・判断重要のため最上位モデル)
+  coder: codex       # 実装(Codex CLI があれば委譲してClaude枠を温存)
+  research: sonnet   # 調査・文書
+  chore: haiku       # 定型雑務
+  qc_tech: cross     # 技術検品(cross = 実装と別ベンダーでクロスレビュー)
+  qc_final: opus     # 納品検品(オペレーターの判断原則で最終チェック)
+
+# Codex(MCP)呼び出し時に使うモデル。空なら ~/.codex/config.toml の既定値。
+codex:
+  model: ""          # 例: gpt-5.3-codex / gpt-5.3-codex-spark(ChatGPT Pro 限定)
+
+video:
+  voicevox: false    # true にすると crew up 時に VOICEVOX エンジン(Docker)を起動
+
+notify:
+  enabled: false     # true にすると完了時などに tools/notify.sh 経由で通知
+                     # 通知先(Slack Webhook / ntfy トピック)は machines/<hostname>.env に書く

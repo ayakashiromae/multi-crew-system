@@ -1,0 +1,9 @@
+services:
+  # ずんだもん等の音声合成エンジン。identity.yaml の video.voicevox: true で crew up 時に起動
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-latest
+    container_name: crew-voicevox
+    ports:
+      - "127.0.0.1:50021:50021"
+    profiles: ["video"]
+    restart: unless-stopped

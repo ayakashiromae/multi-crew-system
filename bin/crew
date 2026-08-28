@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# crew — multi-crew-system ランチャー(配置先: ~/projects/multi-crew-system)
+set -u
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+HOST="$(hostname)"
+ENV_FILE="machines/${HOST}.env"
+SESSION="crew"
+DASH_PORT="${CREW_DASH_PORT:-7777}"
+
+log()  { printf '\033[36m[crew]\033[0m %s\n' "$*"; }
+warn() { printf '\033[33m[crew]\033[0m %s\n' "$*"; }
+
+identity_get() {  # identity_get <dotted.key> <default>
+  python3 - "$1" "${2:-}" <<'PY' 2>/dev/null
+import sys
+try:
+    import yaml
+    d = yaml.safe_load(open("identity.yaml"))
+    for k in sys.argv[1].split("."):
+        d = d[k]
+    print(d)
+except Exception:
+    print(sys.argv[2])
+PY
+}
+
+cmd_sync() {
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    log "スキル・規約を同期中 (git pull --ff-only)"
+    git pull --ff-only 2>/dev/null || warn "同期スキップ(リモート未設定 or ローカル変更あり)"
+  fi
+}
+
+start_dashboard() {
+  mkdir -p state
+  if [ -f state/dashboard.pid ] && kill -0 "$(cat state/dashboard.pid)" 2>/dev/null; then
+    return 0
+  fi
+  nohup python3 dashboard/server.py >state/dashboard.log 2>&1 &
+  echo $! > state/dashboard.pid
+  log "ダッシュボード起動: http://localhost:${DASH_PORT}"
+}
+
+start_voicevox() {
+  if [ "$(identity_get video.voicevox false)" = "True" ] || [ "$(identity_get video.voicevox false)" = "true" ]; then
+    if command -v docker >/dev/null 2>&1; then
+      log "VOICEVOX エンジンを起動"
+      docker compose --profile video up -d voicevox 2>/dev/null || warn "VOICEVOX 起動失敗(docker を確認)"
+    else
+      warn "video.voicevox: true だが docker が見つからない"
+    fi
+  fi
+}
+
+cmd_up() {
+  cmd_sync
+  if [ ! -f identity.yaml ]; then
+    log "identity.yaml が見つかりません。初期設定を始めます。"
+    bash scripts/init_wizard.sh || exit 1
+  fi
+  # shellcheck disable=SC1090
+  [ -f "$ENV_FILE" ] && set -a && . "$ENV_FILE" && set +a
+  python3 scripts/gen_settings.py || { warn "設定生成に失敗"; exit 1; }
+  mkdir -p logs
+  start_dashboard
+  start_voicevox
+  if command -v tmux >/dev/null 2>&1; then
+    log "GMクルー起動 (デタッチ: Ctrl+b → d / 再接続: crew gm)"
+    exec tmux new-session -A -s "$SESSION" -c "$ROOT" claude
+  else
+    warn "tmux なし: 直接 claude を起動します(デタッチ不可)"
+    exec claude
+  fi
+}
+
+cmd_gm()   { exec tmux attach-session -t "$SESSION"; }
+
+cmd_dash() {
+  start_dashboard
+  URL="http://localhost:${DASH_PORT}"
+  log "ダッシュボード: $URL"
+  if command -v wslview >/dev/null 2>&1; then wslview "$URL"
+  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+  fi
+}
+
+cmd_down() {
+  tmux kill-session -t "$SESSION" 2>/dev/null && log "GMセッション終了"
+  if [ -f state/dashboard.pid ]; then
+    kill "$(cat state/dashboard.pid)" 2>/dev/null && log "ダッシュボード停止"
+    rm -f state/dashboard.pid
+  fi
+  command -v docker >/dev/null 2>&1 && docker compose --profile video stop voicevox 2>/dev/null
+  log "完全終了"
+}
+
+cmd_help() {
+  cat <<'EOF'
+crew — multi-crew-system(真マルチクルー環境)
+
+  crew up       出陣(同期 → 初回はウィザード → サービス起動 → GMクルー起動)
+  crew gm       GMセッションに再接続 (tmux attach)
+  crew dash     ダッシュボードを開く
+  crew down     完全終了
+  crew init     初期設定ウィザードを(再)実行
+  crew doctor   環境診断(CLI・依存の検出とインストール)
+  crew keys     APIキー・通知先の追加/差し替え
+  crew sync     スキル・規約の同期 (git pull)
+  crew test     自己診断(設定生成・secret guard・git管理外チェックを1コマンドで)
+  crew decide   判断待ち台帳 (tools/decision.sh list|add|done)
+
+  デタッチ(抜ける・生存): Ctrl+b → d
+EOF
+}
+
+case "${1:-help}" in
+  up)     cmd_up ;;
+  gm)     cmd_gm ;;
+  dash)   cmd_dash ;;
+  down)   cmd_down ;;
+  init)   bash scripts/init_wizard.sh ;;
+  doctor) bash scripts/doctor.sh ;;
+  keys)   bash scripts/init_wizard.sh --keys-only ;;
+  sync)   cmd_sync ;;
+  test)   bash scripts/selftest.sh ;;
+  decide) shift; bash tools/decision.sh "$@" ;;
+  *)      cmd_help ;;
+esac
