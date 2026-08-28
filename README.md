@@ -30,7 +30,7 @@ Claude Code のネイティブ機能(サブエージェント / スキル / hook
 
 ```bash
 mkdir -p ~/projects
-git clone https://github.com/<user>/multi-crew-system.git ~/projects/multi-crew-system
+git clone https://github.com/ayakashiromae/multi-agent-crew.git ~/projects/multi-crew-system
 cd ~/projects/multi-crew-system
 ```
 
