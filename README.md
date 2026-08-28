@@ -14,30 +14,108 @@ Claude Code のネイティブ機能(サブエージェント / スキル / hook
 4. **クルー文化** — 旧環境の Among Us 風ペルソナ(GM🛸 / PM🚀 / QM🔍🟣 / 色クルー🔴🔵🟢)、用語集、
    進行中表示のスピナー文言183本を `themes/crew` に移植
 
-## 配置先(固定)
+## はじめかた(GitHub からダウンロード → 起動まで)
 
-```
-WSL/Linux:  ~/projects/multi-crew-system
-Windows:    \\wsl.localhost\<ディストリ名>\home\<ユーザー名>\projects\multi-crew-system
-```
+### 0. 前提
 
-## クイックスタート
+- Windows なら WSL2(Ubuntu)を入れておく。以降のコマンドは **WSL のターミナル**で打つ
+- Claude Code がインストール・ログイン済みであること(`claude --version` が通る)
+- git / python3 / tmux があること(無ければ後述の `crew doctor` が入れてくれる)
+
+### 1. ダウンロードして配置する
+
+配置先は固定で `~/projects/multi-crew-system`。どちらかの方法で。
+
+**A) git で取得(おすすめ。`crew up` のたびに規約・スキルが自動同期される)**
 
 ```bash
-# A) git から
-git clone <this-repo> ~/projects/multi-crew-system && cd ~/projects/multi-crew-system && ./bin/crew up
-
-# B) zip/フォルダを展開済みなら(配置先へコピー + 自己診断)
-./install.sh
+mkdir -p ~/projects
+git clone https://github.com/<user>/multi-crew-system.git ~/projects/multi-crew-system
+cd ~/projects/multi-crew-system
 ```
+
+**B) GitHub の「Code → Download ZIP」で取得**
+
+1. zip を展開する(Windows なら `C:\Users\<名前>\Downloads\multi-crew-system` など)
+2. WSL から `install.sh` を実行すると、固定の配置先へコピーして自己診断まで走る:
+
+```bash
+bash /mnt/c/Users/<名前>/Downloads/multi-crew-system/install.sh
+cd ~/projects/multi-crew-system
+```
+
+配置後は Windows 側から `\\wsl.localhost\Ubuntu-24.04\home\<ユーザー名>\projects\multi-crew-system` で中身を見られる
+(ディストリ名は `wsl -l` で確認)。
+
+### 2. 環境診断(任意だが初回は推奨)
+
+```bash
+./bin/crew doctor
+```
+
+足りないもの(tmux / PyYAML / Codex CLI など)を検出し、その場でインストールを提案する。
+Codex CLI を入れた場合は `codex login` でブラウザ認証を済ませておく(実装を Codex に委譲する編成のため)。
+
+### 3. 起動する
+
+```bash
+./bin/crew up
+```
+
+初回はウィザードが走る。質問と答え方:
+
+| 質問 | 答え方 |
+|---|---|
+| クルー編成 | 検出結果から推奨が出る。そのまま `Y` でよい |
+| あなたの名前 / 呼ばれ方 | 呼ばれ方の既定は「殿」。好みで変える |
+| この環境の役割・前提 | 「個人開発用」「会社の情報は扱わない」など。空行で終了 |
+| フォルダ | 成果物置き場 / スクショ / 作業場 / 読み取り許可。Enter で既定値、無ければ作成される |
+| テーマ | `crew`(Among Us 風味+スピナー文言)か `plain`(素) |
+| worker の演出 | `crew` なら各クルーが報告の冒頭1行だけ一言添える |
+| APIキー・通知先 | 空 Enter でスキップ可。後から `crew keys` で追加できる |
+
+回答は `identity.yaml`(git 管理外)に保存され、`./bin/crew init` でいつでも作り直せる。
+ウィザードが終わると tmux の中で GMクルー(Claude Code)が立ち上がる。あとは普通に話しかけるだけ。
+
+### 4. 日常の操作
+
+```bash
+./bin/crew up       # 出陣(2回目以降はウィザード無しで即起動)
+Ctrl+b → d          # デタッチ(抜けてもクルーは生きている)
+./bin/crew gm       # 再接続
+./bin/crew dash     # ダッシュボード(http://localhost:7777)を開く
+./bin/crew decide   # 判断待ちの一覧
+./bin/crew test     # 自己診断(設定生成・secret guard・git 管理外チェック)
+./bin/crew down     # 完全終了
+```
+
+`bin` を PATH に通しておくと `crew up` だけで済む:
+
+```bash
+echo 'export PATH="$HOME/projects/multi-crew-system/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
+```
+
+### 5. うまくいかないとき
+
+| 症状 | 見るところ |
+|---|---|
+| `identity.yaml が見つかりません` | `./bin/crew init` を実行 |
+| GM が環境定義を読めないと言う | `python3 scripts/gen_settings.py` を手で実行して `state/identity_context.md` ができるか確認 |
+| Codex に委譲されない | `codex login` 済みか、`.mcp.json` の `codex mcp-server` が手元の Codex CLI で動くか(`codex mcp-server --help`) |
+| hooks を変えたのに効かない | Claude Code を再起動(`crew down` → `crew up`) |
+| その他 | `./bin/crew test` の ✘ を読む |
+
+## コマンド一覧
 
 ```
 crew up       出陣(同期 → 初回はウィザード → サービス起動 → GMクルー起動)
 crew gm       GMセッションに再接続
 crew dash     ダッシュボードを開く (http://localhost:7777)
 crew down     完全終了
+crew init     初期設定ウィザードを(再)実行
 crew doctor   環境診断(Codex CLI等の検出・インストール)
 crew keys     APIキー・通知先の追加/差し替え
+crew sync     スキル・規約の同期 (git pull)
 crew test     自己診断(設定生成・secret guard・git管理外チェックを1コマンドで)
 crew decide   判断待ち台帳(list / add "<内容>" / done <id>)
 デタッチ:      Ctrl+b → d
