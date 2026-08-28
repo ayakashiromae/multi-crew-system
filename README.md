@@ -187,7 +187,7 @@ qc_tech=cross(異種クロスレビュー) / qc_final=opus。
 ├── dashboard/               ローカルダッシュボード(イベント流し + 🚨判断待ち)
 ├── tools/                   notify.sh(Slack/ntfy通知) / decision.sh(判断待ち台帳)
 ├── scripts/                 init ウィザード・doctor・設定生成・secret guard・selftest
-├── identity.example.yaml    ← これをコピーせず ./bin/crew up で対話生成するのが楽
+├── identity.example.yaml    ← これをコピーせず crew up で対話生成するのが楽
 └── machines/                拠点ごとのシークレット(.env は git 管理外)
 ```
 
