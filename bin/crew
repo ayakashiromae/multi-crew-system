@@ -78,21 +78,40 @@ cmd_up() {
 
 cmd_gm()   { exec tmux attach-session -t "$SESSION"; }
 
-cmd_dash() {
-  start_dashboard
-  URL="http://localhost:${DASH_PORT}"
-  log "ダッシュボード: $URL"
-  if command -v wslview >/dev/null 2>&1; then wslview "$URL"
-  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL"
+open_browser() {
+  URL="$1"
+  if command -v wslview >/dev/null 2>&1; then wslview "$URL" >/dev/null 2>&1
+  elif [ -x /mnt/c/Windows/explorer.exe ]; then /mnt/c/Windows/explorer.exe "$URL" >/dev/null 2>&1 || true   # WSL2: 既定ブラウザで開く
+  elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL" >/dev/null 2>&1
+  else warn "ブラウザを自動で開けません。手動で開いてください: $URL"
   fi
 }
 
-cmd_down() {
-  tmux kill-session -t "$SESSION" 2>/dev/null && log "GMセッション終了"
+stop_dashboard() {
   if [ -f state/dashboard.pid ]; then
     kill "$(cat state/dashboard.pid)" 2>/dev/null && log "ダッシュボード停止"
     rm -f state/dashboard.pid
   fi
+}
+
+cmd_dash() {
+  # crew dash            … 起動(必要なら)+ブラウザを開く。サーバーが古い(API 不足)場合は再起動を案内
+  # crew dash restart    … サーバーを再起動してからブラウザを開く(dashboard/ を更新したとき)
+  if [ "${1:-}" = "restart" ]; then stop_dashboard; sleep 1; fi
+  start_dashboard
+  URL="http://localhost:${DASH_PORT}"
+  sleep 1
+  if command -v curl >/dev/null 2>&1; then
+    CODE="$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/closing" 2>/dev/null || echo 000)"
+    if [ "$CODE" = "404" ]; then warn "ダッシュボードのサーバーが古い版で動いています。'crew dash restart' で更新してください"; fi
+  fi
+  log "ダッシュボード: $URL"
+  open_browser "$URL"
+}
+
+cmd_down() {
+  tmux kill-session -t "$SESSION" 2>/dev/null && log "GMセッション終了"
+  stop_dashboard
   command -v docker >/dev/null 2>&1 && docker compose --profile video stop voicevox 2>/dev/null
   log "完全終了"
 }
@@ -103,7 +122,7 @@ crew — multi-crew-system(真マルチクルー環境)
 
   crew up       出陣(同期 → 初回はウィザード → サービス起動 → GMクルー起動)
   crew gm       GMセッションに再接続 (tmux attach)
-  crew dash     ダッシュボードを開く
+  crew dash     ダッシュボードを開く(ブラウザ起動)。dash restart でサーバー再起動
   crew down     完全終了
   crew init     初期設定ウィザードを(再)実行
   crew doctor   環境診断(CLI・依存の検出とインストール)
@@ -119,7 +138,7 @@ EOF
 case "${1:-help}" in
   up)     cmd_up ;;
   gm)     cmd_gm ;;
-  dash)   cmd_dash ;;
+  dash)   cmd_dash "${2:-}" ;;
   down)   cmd_down ;;
   init)   bash scripts/init_wizard.sh ;;
   doctor) bash scripts/doctor.sh ;;

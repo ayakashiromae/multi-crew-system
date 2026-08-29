@@ -46,6 +46,11 @@
   time.stale{color:var(--warn)}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px}
   .panel h2{font-size:12px;color:var(--warn);letter-spacing:.06em;margin-bottom:6px}
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:10px}
+  .tab{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted,#9aa);padding:6px 10px;font-size:12px;cursor:pointer;letter-spacing:.06em}
+  .tab.active{color:var(--warn);border-bottom-color:var(--warn)}
+  .tab .cnt{margin-left:4px;padding:0 6px;border-radius:999px;background:var(--border);font-size:10px}
+  .tabpane{display:none}.tabpane.active{display:block}
   .panel ul{list-style:none}
   .panel li{padding:4px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
   .panel li:last-child{border-bottom:none}
@@ -68,8 +73,30 @@
 </div>
 
 <div class="panel">
-  <h2>🚨 判断待ち(非ブロッキング) — tools/decision.sh add / done</h2>
-  <ul id="decisions"><li class="none">なし</li></ul>
+  <h2>🛑 シャットダウン可否 <span id="sd-badge" class="none">判定待ち…</span></h2>
+  <ul id="sd-reasons"><li class="none">tools/closing.sh status</li></ul>
+</div>
+
+<div class="panel">
+  <div class="tabs">
+    <button class="tab active" data-tab="done">📋 やったこと <span id="cl-date" class="none"></span></button>
+    <button class="tab" data-tab="waiting">⏳ 殿待ち <span id="cl-waiting-n" class="cnt"></span></button>
+    <button class="tab" data-tab="decisions">🚨 判断待ち <span id="dec-n" class="cnt"></span></button>
+  </div>
+  <div class="tabpane active" id="tab-done">
+    <table style="width:100%"><thead><tr><th style="width:18%">系統</th><th>成果</th><th style="width:28%">場所</th></tr></thead>
+    <tbody id="cl-done"><tr><td colspan="3" class="empty">tools/closing.sh set &lt;closing.md&gt; で取り込み</td></tr></tbody></table>
+  </div>
+  <div class="tabpane" id="tab-waiting">
+    <h2>⏳ 殿の対応が必要なもの</h2>
+    <ol id="cl-waiting"><li class="none">なし</li></ol>
+    <h2 style="margin-top:12px">▶ 次に着手する順(承認不要)</h2>
+    <ol id="cl-next"><li class="none">なし</li></ol>
+  </div>
+  <div class="tabpane" id="tab-decisions">
+    <h2>🚨 判断待ち(非ブロッキング) — tools/decision.sh add / done</h2>
+    <ul id="decisions"><li class="none">なし</li></ul>
+  </div>
 </div>
 
 <div class="controls">
@@ -127,10 +154,31 @@ async function meta(){
 async function decisions(){
   try{
     const d=await(await fetch("/api/decisions")).json();
+    $("dec-n").textContent=d.length?d.length:"";
     $("decisions").innerHTML=d.length?d.map(r=>`<li><span class="id">#${esc(r.id)}</span>${esc(r.item)}${r.default?`<span class="def">先行既定値: ${esc(r.default)}</span>`:""}</li>`).join(""):'<li class="none">なし</li>';
   }catch(e){}
 }
 meta();tick();decisions();setInterval(tick,3000);setInterval(decisions,5000);
+async function closing(){
+  try{
+    const c=await(await fetch("/api/closing")).json();
+    const sd=c.shutdown||{}; const b=$("sd-badge");
+    if(sd.ok===true){b.textContent="✅ 落としてよい";b.style.color="#7be495"} else if(sd.ok===false){b.textContent="⛔ まだ待て";b.style.color="#ff8080"} else {b.textContent="判定なし"}
+    $("sd-reasons").innerHTML=(sd.reasons&&sd.reasons.length)?sd.reasons.map(r=>"<li>"+esc(r)+"</li>").join(""):"<li class='none'>止める理由なし"+(sd.checked?"(判定 "+esc(sd.checked)+")":"")+"</li>";
+    $("cl-date").textContent=c.date?("("+c.date+" "+(c.ts||"").slice(11,16)+")"):"";
+    $("cl-done").innerHTML=(c.done&&c.done.length)?c.done.map(r=>"<tr><td>"+esc(r.area)+"</td><td>"+esc(r.result)+"</td><td>"+esc(r.where)+"</td></tr>").join(""):"<tr><td colspan='3' class='empty'>未登録</td></tr>";
+    $("cl-waiting").innerHTML=(c.waiting&&c.waiting.length)?c.waiting.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
+    $("cl-waiting-n").textContent=(c.waiting&&c.waiting.length)?c.waiting.length:"";
+    $("cl-next").innerHTML=(c.next&&c.next.length)?c.next.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
+  }catch(e){}
+}
+closing();setInterval(closing,30000);
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));
+  document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("active",p.id==="tab-"+b.dataset.tab));
+  try{localStorage.setItem("crew-tab",b.dataset.tab)}catch(e){}
+}));
+try{const t=localStorage.getItem("crew-tab");if(t){const b=document.querySelector('.tab[data-tab="'+t+'"]');if(b)b.click();}}catch(e){}
 $("filter").addEventListener("change",render);
 </script>
 </body>

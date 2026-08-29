@@ -11,6 +11,9 @@ PORT = int(os.environ.get("CREW_DASH_PORT", "7777"))
 EVENTS = os.path.join(ROOT, "state", "events.jsonl")
 META = os.path.join(ROOT, "state", "meta.json")
 DECISIONS = os.path.join(ROOT, "state", "decisions.jsonl")
+CLOSING = os.path.join(ROOT, "state", "closing.json")
+CLOSING_SH = os.path.join(ROOT, "tools", "closing.sh")
+_shutdown_cache = {"ts": 0.0}
 INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 
@@ -50,6 +53,25 @@ def open_decisions():
     return list(st.values())
 
 
+def closing_status():
+    """state/closing.json を返す。shutdown 判定は 30 秒キャッシュで tools/closing.sh status を実行して更新"""
+    import subprocess, time
+    now = time.time()
+    if now - _shutdown_cache["ts"] > 30 and os.path.exists(CLOSING_SH):
+        try:
+            subprocess.run(["bash", CLOSING_SH, "status"], capture_output=True, timeout=20)
+        except Exception:
+            pass
+        _shutdown_cache["ts"] = now
+    if not os.path.exists(CLOSING):
+        return {}
+    try:
+        with open(CLOSING, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -72,6 +94,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(tail_events(), ensure_ascii=False))
         elif path == "/api/decisions":
             self._send(json.dumps(open_decisions(), ensure_ascii=False))
+        elif path == "/api/closing":
+            self._send(json.dumps(closing_status(), ensure_ascii=False))
         elif path == "/api/meta":
             meta = {}
             if os.path.exists(META):

@@ -139,7 +139,8 @@ crew down     # 完全終了
 ```
 crew up       出陣(同期 → 初回はウィザード → サービス起動 → GMクルー起動)
 crew gm       GMセッションに再接続
-crew dash     ダッシュボードを開く (http://localhost:7777)
+crew dash     ダッシュボードを開く (http://localhost:7777)。WSL2 では Windows の既定ブラウザが立ち上がる
+crew dash restart  ダッシュボードのサーバーを再起動してから開く(dashboard/ を更新したとき)
 crew down     完全終了
 crew init     初期設定ウィザードを(再)実行
 crew doctor   環境診断(Codex CLI等の検出・インストール)
