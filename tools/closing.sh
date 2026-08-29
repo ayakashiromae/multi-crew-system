@@ -63,7 +63,7 @@ if os.path.exists(ev):
 if last:
     try:
         age=(datetime.datetime.now()-datetime.datetime.fromisoformat(last)).total_seconds()/60
-        if age<10: ok=False; reasons.append(f"最終ツール実行から {age:.0f} 分(作業中の可能性)")
+        if age<10: reasons.append(f"最終ツール実行から {age:.0f} 分(GM が応答中。止める理由ではない)")
     except Exception: pass
 # 3) 重い処理プロセス(レンダ・文字起こし・合成)
 try:
@@ -84,9 +84,10 @@ if os.path.exists(dec):
         except Exception: continue
         if r.get("status")=="open": opens[r["id"]]=r
         elif r.get("status")=="done": opens.pop(r["id"],None)
-if opens: reasons.append(f"殿判断待ち {len(opens)} 件(止める理由にはならない)")
+if opens: reasons.append(f"殿判断待ち {len(opens)} 件(ボールは殿側。止めてよい)")
 d["shutdown"]={"ok":ok,"checked":time.strftime("%Y-%m-%dT%H:%M:%S"),"reasons":reasons,
-               "note":"OK=クルー稼働なし・重い処理なし。docker の VOICEVOX は止めてよい(次回 crew up で再起動)"}
+               "blocking":[r for r in reasons if r.startswith("稼働中クルー") or r.startswith("実行中の重い処理")],
+               "note":"止める理由になるのは「稼働中クルー」「実行中の重い処理」だけ。docker の VOICEVOX は止めてよい(次回 crew up で再起動)"}
 json.dump(d,open(f,"w",encoding="utf-8"),ensure_ascii=False,indent=1)
 print("[shutdown] "+("✅ 落としてよい" if ok else "⛔ まだ待て")); [print("  - "+r) for r in reasons]
 PY

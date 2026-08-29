@@ -51,6 +51,10 @@
   .tab.active{color:var(--warn);border-bottom-color:var(--warn)}
   .tab .cnt{margin-left:4px;padding:0 6px;border-radius:999px;background:var(--border);font-size:10px}
   .tabpane{display:none}.tabpane.active{display:block}
+  .tabpane ol{list-style:decimal;padding-left:2em;margin:4px 0}
+  .tabpane ol li{padding:6px 0;border-bottom:1px dashed var(--border)}
+  .tabpane ol li.none{list-style:none;margin-left:-2em}
+  #sd-reasons{list-style:disc;padding-left:1.6em;margin:4px 0}#sd-reasons li.none{list-style:none;margin-left:-1.6em}
   .panel ul{list-style:none}
   .panel li{padding:4px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
   .panel li:last-child{border-bottom:none}
@@ -164,7 +168,8 @@ async function closing(){
     const c=await(await fetch("/api/closing")).json();
     const sd=c.shutdown||{}; const b=$("sd-badge");
     if(sd.ok===true){b.textContent="✅ 落としてよい";b.style.color="#7be495"} else if(sd.ok===false){b.textContent="⛔ まだ待て";b.style.color="#ff8080"} else {b.textContent="判定なし"}
-    $("sd-reasons").innerHTML=(sd.reasons&&sd.reasons.length)?sd.reasons.map(r=>"<li>"+esc(r)+"</li>").join(""):"<li class='none'>止める理由なし"+(sd.checked?"(判定 "+esc(sd.checked)+")":"")+"</li>";
+    const blocking=new Set(sd.blocking||[]);
+    $("sd-reasons").innerHTML=(sd.reasons&&sd.reasons.length)?sd.reasons.map(r=>"<li"+(blocking.has(r)?" style='color:#ff8080'":" style='color:var(--muted,#9aa)'")+">"+(blocking.has(r)?"⛔ ":"ℹ ")+esc(r)+"</li>").join(""):"<li class='none'>止める理由なし"+(sd.checked?"(判定 "+esc(sd.checked)+")":"")+"</li>";
     $("cl-date").textContent=c.date?("("+c.date+" "+(c.ts||"").slice(11,16)+")"):"";
     $("cl-done").innerHTML=(c.done&&c.done.length)?c.done.map(r=>"<tr><td>"+esc(r.area)+"</td><td>"+esc(r.result)+"</td><td>"+esc(r.where)+"</td></tr>").join(""):"<tr><td colspan='3' class='empty'>未登録</td></tr>";
     $("cl-waiting").innerHTML=(c.waiting&&c.waiting.length)?c.waiting.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
