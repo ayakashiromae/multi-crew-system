@@ -24,10 +24,10 @@ for dir in "$@"; do
   execs=$(find "$dir" -type f \( -name '*.sh' -o -name '*.py' -o -name '*.js' -o -name '*.mjs' -o -name '*.ts' -o -name '*.rb' -o -perm -u+x \) | grep -v '/SKILL.md$' || true)
   if [[ -n "$execs" ]]; then echo "  WARN 実行スクリプトあり(中身を読むこと):"; printf '%s\n' "$execs" | sed 's/^/       /'; warn=1; fi
   # 危険コマンド・外部送信・秘密
-  grep -rnE --exclude=vet.sh 'curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$dir" && { echo "  NG  リモート取得スクリプトのパイプ実行"; ng=1; }
-  grep -rnE --exclude=vet.sh '\bsudo\b|rm -rf /|git push --force|mkfs|dd if=' "$dir" | grep -v 'Do NOT\|しない\|禁止' && { echo "  WARN 破壊的/特権コマンドへの言及(文脈を読むこと)"; warn=1; }
-  grep -rniE --exclude=vet.sh '(api[_-]?key|secret|token|password)[^\n]{0,40}(paste|貼|provide|enter|入力|export |echo )' "$dir" && { echo "  WARN 秘密の入力/表示を求める文(文脈を読むこと)"; warn=1; }
-  grep -rniE --exclude=vet.sh 'ignore (all )?(previous|prior) instructions|以前の指示を無視|system prompt' "$dir" && { echo "  NG  インジェクション定型句"; ng=1; }
+  grep -rnE --exclude=vet.sh --exclude=vetting-checklist.md 'curl[^|]*\|[[:space:]]*(ba)?sh|wget[^|]*\|[[:space:]]*(ba)?sh' "$dir" && { echo "  NG  リモート取得スクリプトのパイプ実行"; ng=1; }
+  grep -rnE --exclude=vet.sh --exclude=vetting-checklist.md '\bsudo\b|rm -rf /|git push --force|mkfs|dd if=' "$dir" | grep -v 'Do NOT\|しない\|禁止' && { echo "  WARN 破壊的/特権コマンドへの言及(文脈を読むこと)"; warn=1; }
+  grep -rniE --exclude=vet.sh --exclude=vetting-checklist.md '(api[_-]?key|secret|token|password)[^\n]{0,40}(paste|貼|provide|enter|入力|export |echo )' "$dir" && { echo "  WARN 秘密の入力/表示を求める文(文脈を読むこと)"; warn=1; }
+  grep -rniE --exclude=vet.sh --exclude=vetting-checklist.md 'ignore (all )?(previous|prior) instructions|以前の指示を無視|system prompt' "$dir" && { echo "  NG  インジェクション定型句"; ng=1; }
   grep -rnoE 'https?://[^ )"'"'"'>]+' "$dir" | grep -vE 'example\.com|competitor[0-9]|localhost|github\.com|anthropic\.com|claude\.(ai|com)' | awk -F: '{print $3":"$4}' | sort -u | head -20 | sed 's/^/  URL  /'
   # ライセンス(スキル dir またはその親 2 階層)
   lic=""; for p in "$dir" "$dir/.." "$dir/../.."; do for f in LICENSE LICENSE.md LICENSE.txt; do [[ -f "$p/$f" ]] && { lic="$p/$f"; break 2; }; done; done
