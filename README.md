@@ -26,7 +26,7 @@ Claude Code のネイティブ機能(サブエージェント / スキル / hook
 
 配置先は固定で `~/projects/multi-crew-system`。どちらかの方法で。
 
-**A) git で取得(おすすめ。`crew up` のたびに規約・スキルが自動同期される)**
+**A) git で取得(おすすめ。`crew up` のたびに origin を確認し、更新があれば取り込んで内容を表示。未 push のコミットがあれば push する — `CREW_AUTO_PUSH=0 crew up` で抑止。force は使わない)**
 
 ```bash
 mkdir -p ~/projects

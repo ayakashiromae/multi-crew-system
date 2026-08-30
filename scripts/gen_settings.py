@@ -51,9 +51,19 @@ def read_if(path):
     return ""
 
 # ---- settings.local.json ------------------------------------------
+perms = ident.get("permissions") or {}
+def _rules(key):
+    v = perms.get(key) or []
+    return sorted({str(r).strip() for r in v if str(r).strip()})
+allow_rules = _rules("allow")
+# force push はクルー共通の絶対禁止(CLAUDE.md)。identity で許可を広げても deny 側で必ず塞ぐ。
+deny_rules = sorted(set(_rules("deny")) | {"Bash(git push --force:*)", "Bash(git push -f:*)"})
+
 settings = {
     "permissions": {
         "additionalDirectories": sorted(set([outbox, shots, workspace] + readable)),
+        **({"allow": allow_rules} if allow_rules else {}),
+        "deny": deny_rules,
     },
     "env": {
         "CREW_OUTBOX": outbox,

@@ -24,6 +24,14 @@ paths:
   readable:                      # クルーが読み取ってよいフォルダ一覧
     - ~/dev
 
+# Claude Code の permissions に流し込む許可/禁止ルール(任意。.claude/settings.local.json は
+# crew up のたびに再生成されるので、直接編集せずここに書く)。
+# 例: 特定リポジトリの push を確認なしで許す。force push は書いても deny 側で必ず塞がれる。
+# permissions:
+#   allow:
+#     - "Bash(git push origin main)"
+#   deny: []
+
 # themes/ 内のディレクトリ名。plain = 素のClaude / crew = Among Us風味(GMのみ適用)
 # crew を選ぶと、進行中表示のスピナー文言(✶ ○○中…)も themes/crew/spinner_verbs.json に置き換わる。
 theme: crew
