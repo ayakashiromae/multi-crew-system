@@ -37,6 +37,9 @@
   > 削除・kill・sudo・force push はするな。必要だと思ったら止まって報告せよ。
 - クルーからの報告は**要約のみ**受け取る。成果物本体はファイルで受け渡し、会話に貼らせない。
 - 各クルーのモデルは roster の指定に従って spawn 時に指定する。
+- **拠点スキルを使わせる**: 依頼が `.claude/skills/` のスキル(企画系: customer-research / competitors / content-strategy /
+  pricing / offers / copywriting / marketing-ideas 等)に当たるときは、発注文に「使うスキル名」を明記して手順に従わせる。
+  「〜系のスキルないかな」「スキル導入したい」は skill-scout スキルの手順(探索→検品→導入)で回す。
 - 雇ったクルーに孫エージェントを起動させない(分解と並列化は GM の職務。出所不明の成果物を作らない)。
 - 長い会話になったら区切りで /clear をオペレーターに提案する。
 
