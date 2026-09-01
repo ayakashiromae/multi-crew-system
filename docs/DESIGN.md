@@ -55,7 +55,7 @@ operator-principles(git共有)へ汎用化して昇格。会話は越境させ�
 | 旧環境 | 本環境 | 備考 |
 |---|---|---|
 | 将軍(GMクルー🛸)+家老(PMクルー🚀) | GM(メインセッション) | 統括と采配を一人で担う。`themes/crew/persona.md` |
-| 軍師(QMクルー🔍🟣) | qc-tech / qc-final | 敵対的レビュー+判断原則による納品検品 |
+| 軍師(QMクルー🩵⚫) | qc-tech / qc-final | 敵対的レビュー+判断原則による納品検品 |
 | 足軽1-7(色クルー🔴🔵🟢) | coder🔴 / research🔵 / chore🟢 | `worker_flavor: crew` で報告冒頭1行のみ演出 |
 | among_us_glossary.md | themes/crew/glossary.md | 役職の写像を追記 |
 | settings.json spinnerVerbs(183本) | themes/crew/spinner_verbs.json | gen_settings が settings.local.json へ注入 |

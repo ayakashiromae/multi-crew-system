@@ -4,6 +4,7 @@ state/events.jsonl(hooks が追記)と state/meta.json を配信する。
 実行時データは拠点ローカル: このサーバも各PCで独立に動く。"""
 import json
 import os
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,7 +37,8 @@ def tail_events(n=300):
 
 
 def open_decisions():
-    """decisions.jsonl(追記型)から未決のみを返す"""
+    """decisions.jsonl(追記型)から未決のみを返す。kind フィールドの無い既存レコードは
+    "block"(判断待ち)として扱う(後方互換)。"""
     if not os.path.exists(DECISIONS):
         return []
     st = {}
@@ -47,10 +49,46 @@ def open_decisions():
             except Exception:
                 continue
             if r.get("status") == "open":
+                r.setdefault("kind", "block")
                 st[r.get("id")] = r
             elif r.get("status") == "done":
                 st.pop(r.get("id"), None)
     return list(st.values())
+
+
+def crews_status():
+    """稼働中クルー一覧(best effort)。events.jsonl の Tool/Agent(spawn。agent フィールドあり)と
+    CrewDone(完了)を時系列で突き合わせる。CrewDone に agent 識別が乗っていれば同一 agent 内の
+    最古 spawn を完了させ、識別が無い場合のみ全体 FIFO で近似する(異種クルーの並行時、完了順が
+    起動順と違うと全体 FIFO は取り違えるため)。対応付けが取れているとは限らないので、
+    spawn から2時間経過したものは無条件に稼働中から外す(保険)。"""
+    open_spawns = []  # [{agent, task, since}]
+    for e in tail_events(3000):
+        if e.get("event") == "Tool" and e.get("tool") in ("Task", "Agent") and e.get("agent"):
+            open_spawns.append({"agent": e["agent"], "task": e.get("task", ""), "since": e.get("ts", "")})
+        elif e.get("event") == "CrewDone":
+            if not open_spawns:
+                continue
+            done_agent = e.get("agent")
+            if done_agent:
+                for i, s in enumerate(open_spawns):
+                    if s["agent"] == done_agent:
+                        open_spawns.pop(i)
+                        break
+                else:
+                    open_spawns.pop(0)
+            else:
+                open_spawns.pop(0)
+    now = datetime.now()
+    fresh = []
+    for s in open_spawns:
+        try:
+            age = (now - datetime.fromisoformat(s["since"])).total_seconds()
+        except Exception:
+            age = 0
+        if age <= 2 * 3600:
+            fresh.append(s)
+    return fresh
 
 
 def closing_status():
@@ -94,6 +132,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(json.dumps(tail_events(), ensure_ascii=False))
         elif path == "/api/decisions":
             self._send(json.dumps(open_decisions(), ensure_ascii=False))
+        elif path == "/api/crews":
+            self._send(json.dumps(crews_status(), ensure_ascii=False))
         elif path == "/api/closing":
             self._send(json.dumps(closing_status(), ensure_ascii=False))
         elif path == "/api/meta":

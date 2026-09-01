@@ -11,7 +11,7 @@ Claude Code のネイティブ機能(サブエージェント / スキル / hook
 2. **運用プロトコル** — 聞き取り→起票→分配→検品→納品のフローと、トークンを守る雇用規則(CLAUDE.md)
 3. **教育の型** — オペレーターの却下を記録し、週次で判断原則へ昇格させる仕組み(影武者方式)。
    旧環境で裁定済みの規律20件を初期原則として同梱
-4. **クルー文化** — 旧環境の Among Us 風ペルソナ(GM🛸 / PM🚀 / QM🔍🟣 / 色クルー🔴🔵🟢)、用語集、
+4. **クルー文化** — 旧環境の Among Us 風ペルソナ(GM🛸 / PM🚀 / QM🩵⚫ / 色クルー🔴🔵🟢)、用語集、
    進行中表示のスピナー文言183本を `themes/crew` に移植
 
 ## はじめかた(GitHub からダウンロード → 起動まで)
@@ -179,7 +179,7 @@ qc_tech=cross(異種クロスレビュー) / qc_final=opus。
 ├── CLAUDE.md                GMクルーの運用プロトコル(雇用規則・検品規則・安全規則・秘匿規則)
 ├── AGENTS.md                Codex(MCP)側に読ませる規約
 ├── .claude/
-│   ├── agents/              クルー定義(coder🔴 / research🔵 / chore🟢 / qc-tech🔍 / qc-final🟣)
+│   ├── agents/              クルー定義(coder🔴 / research🔵 / chore🟢 / qc-tech🩵 / qc-final⚫)
 │   ├── skills/              共通スキル(operator-principles: 初期原則20件 / distill-rejections)
 │   └── settings.json        deny(秘密・破壊的操作) + hooks(secret guard / ダッシュボード送信)
 ├── .mcp.json                MCP定義(codex)

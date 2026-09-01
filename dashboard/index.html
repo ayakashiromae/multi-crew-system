@@ -46,21 +46,33 @@
   time.stale{color:var(--warn)}
   .panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px}
   .panel h2{font-size:12px;color:var(--warn);letter-spacing:.06em;margin-bottom:6px}
-  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:10px}
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:10px;flex-wrap:wrap}
   .tab{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted,#9aa);padding:6px 10px;font-size:12px;cursor:pointer;letter-spacing:.06em}
   .tab.active{color:var(--warn);border-bottom-color:var(--warn)}
   .tab .cnt{margin-left:4px;padding:0 6px;border-radius:999px;background:var(--border);font-size:10px}
+  .tab .kind-tag{margin-left:4px;padding:0 6px;border-radius:999px;font-size:9px;letter-spacing:.03em;border:1px solid}
+  .kind-tag.block{color:var(--bad);border-color:var(--bad)}
+  .kind-tag.rule{color:var(--good);border-color:var(--good)}
   .tabpane{display:none}.tabpane.active{display:block}
   .tabpane ol{list-style:decimal;padding-left:2em;margin:4px 0}
-  .tabpane ol li{padding:6px 0;border-bottom:1px dashed var(--border)}
+  .tabpane ol li{padding:6px 0;border-bottom:1px dashed var(--border);white-space:normal;word-break:break-word}
   .tabpane ol li.none{list-style:none;margin-left:-2em}
   #sd-reasons{list-style:disc;padding-left:1.6em;margin:4px 0}#sd-reasons li.none{list-style:none;margin-left:-1.6em}
   .panel ul{list-style:none}
-  .panel li{padding:4px 0;border-bottom:1px dashed var(--border);font-size:12.5px}
+  .panel li{padding:4px 0;border-bottom:1px dashed var(--border);font-size:12.5px;white-space:normal;word-break:break-word}
   .panel li:last-child{border-bottom:none}
   .panel li .id{color:var(--ink3);margin-right:8px}
   .panel li .def{color:var(--ink3);font-size:11px;margin-left:8px}
+  .panel li .origin{color:var(--accent);font-size:10px;margin-left:8px;border:1px solid var(--accent);border-radius:8px;padding:0 6px}
   .panel .none{color:var(--ink3);font-size:12px}
+  #cl-done td{white-space:normal;word-break:break-word}
+  .crew-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .crew-card{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;gap:10px}
+  .crew-chip{width:14px;height:14px;border-radius:4px;flex:none;margin-top:2px;border:1px solid rgba(255,255,255,.25)}
+  .crew-body{min-width:0}
+  .crew-role{font-size:12.5px;font-weight:600}
+  .crew-task{font-size:12px;color:var(--ink2);margin-top:2px;white-space:normal;word-break:break-word}
+  .crew-since{font-size:10.5px;color:var(--ink3);margin-top:4px}
 </style>
 </head>
 <body>
@@ -83,23 +95,28 @@
 
 <div class="panel">
   <div class="tabs">
-    <button class="tab active" data-tab="done">📋 やったこと <span id="cl-date" class="none"></span></button>
-    <button class="tab" data-tab="waiting">⏳ 殿待ち <span id="cl-waiting-n" class="cnt"></span></button>
-    <button class="tab" data-tab="decisions">🚨 判断待ち <span id="dec-n" class="cnt"></span></button>
+    <button class="tab active" data-tab="crews">🛸 稼働中のクルーチーム <span id="crews-n" class="cnt"></span></button>
+    <button class="tab" data-tab="done">📋 やったこと <span id="cl-date" class="none"></span></button>
+    <button class="tab" data-tab="decisions">🚨 判断待ち <span class="kind-tag block">作業停止中</span> <span id="dec-n" class="cnt"></span></button>
+    <button class="tab" data-tab="rules">🧭 クルー裁定 <span class="kind-tag rule">先行中・後追い確認</span> <span id="rule-n" class="cnt"></span></button>
   </div>
-  <div class="tabpane active" id="tab-done">
+  <div class="tabpane active" id="tab-crews">
+    <div class="crew-cards" id="crews-list"><div class="empty">全クルー待機中</div></div>
+    <div class="hint" style="margin-top:6px">表示は hooks イベントからの近似(完了の対応付けが取れない場合あり・2時間で自動消灯)</div>
+  </div>
+  <div class="tabpane" id="tab-done">
     <table style="width:100%"><thead><tr><th style="width:18%">系統</th><th>成果</th><th style="width:28%">場所</th></tr></thead>
     <tbody id="cl-done"><tr><td colspan="3" class="empty">tools/closing.sh set &lt;closing.md&gt; で取り込み</td></tr></tbody></table>
-  </div>
-  <div class="tabpane" id="tab-waiting">
-    <h2>⏳ 殿の対応が必要なもの</h2>
-    <ol id="cl-waiting"><li class="none">なし</li></ol>
     <h2 style="margin-top:12px">▶ 次に着手する順(承認不要)</h2>
     <ol id="cl-next"><li class="none">なし</li></ol>
   </div>
   <div class="tabpane" id="tab-decisions">
-    <h2>🚨 判断待ち(非ブロッキング) — tools/decision.sh add / done</h2>
+    <h2>🚨 判断待ち — 殿の判断まで作業が止まるもの(tools/decision.sh add / done)</h2>
     <ul id="decisions"><li class="none">なし</li></ul>
+  </div>
+  <div class="tabpane" id="tab-rules">
+    <h2>🧭 クルー裁定 — 作業は止めず、安全既定で先行して後追い確認するもの(tools/decision.sh rule / done)</h2>
+    <ul id="rules"><li class="none">なし</li></ul>
   </div>
 </div>
 
@@ -155,14 +172,59 @@ async function meta(){
     if(m.theme==="crew"){$("title").textContent="🛸 crew dashboard";document.title="🛸 multi-crew-system"}
   }catch(e){$("meta").textContent="meta 未生成(crew init を実行)"}
 }
+let closingWaiting=[];
+let allDecisions=[];
+function renderDecisionPanes(){
+  const waitLis=closingWaiting.map(x=>`<li>${esc(x)}<span class="origin">本日の締めより</span></li>`);
+  const blockLis=allDecisions.filter(r=>(r.kind||"block")==="block")
+    .map(r=>`<li><span class="id">#${esc(r.id)}</span>${esc(r.item)}${r.default?`<span class="def">先行既定値: ${esc(r.default)}</span>`:""}</li>`);
+  const all=waitLis.concat(blockLis);
+  $("dec-n").textContent=all.length?all.length:"";
+  $("decisions").innerHTML=all.length?all.join(""):'<li class="none">なし</li>';
+  const ruleLis=allDecisions.filter(r=>r.kind==="rule")
+    .map(r=>`<li><span class="id">#${esc(r.id)}</span>${esc(r.item)}${r.default?`<span class="def">既定値: ${esc(r.default)}</span>`:""}</li>`);
+  $("rule-n").textContent=ruleLis.length?ruleLis.length:"";
+  $("rules").innerHTML=ruleLis.length?ruleLis.join(""):'<li class="none">なし</li>';
+}
 async function decisions(){
   try{
-    const d=await(await fetch("/api/decisions")).json();
-    $("dec-n").textContent=d.length?d.length:"";
-    $("decisions").innerHTML=d.length?d.map(r=>`<li><span class="id">#${esc(r.id)}</span>${esc(r.item)}${r.default?`<span class="def">先行既定値: ${esc(r.default)}</span>`:""}</li>`).join(""):'<li class="none">なし</li>';
+    allDecisions=await(await fetch("/api/decisions")).json();
+    renderDecisionPanes();
   }catch(e){}
 }
-meta();tick();decisions();setInterval(tick,3000);setInterval(decisions,5000);
+const AGENT_COLORS={
+  coder:{hex:"#C51111",label:"Red / coder"},
+  research:{hex:"#132ED1",label:"Blue / research"},
+  chore:{hex:"#117F2D",label:"Green / chore"},
+  "qc-tech":{hex:"#38FEDC",label:"Cyan / qc-tech"},
+  "qc-final":{hex:"#3F474E",label:"Black / qc-final"},
+  gm:{hex:"#D6E0F0",label:"White / gm"},
+};
+function agentColor(name){
+  return AGENT_COLORS[name]||{hex:"#EF7D0D",label:"Orange / "+(name||"unknown")};
+}
+function elapsed(ts){
+  if(!ts)return"";
+  const d=new Date(ts.replace(" ","T"));
+  if(isNaN(d))return"";
+  const mins=Math.max(0,Math.floor((Date.now()-d.getTime())/60000));
+  if(mins<60)return mins+"分経過";
+  return Math.floor(mins/60)+"時間"+(mins%60)+"分経過";
+}
+async function crews(){
+  try{
+    const c=await(await fetch("/api/crews")).json();
+    $("crews-n").textContent=c.length?c.length:"";
+    $("crews-list").innerHTML=c.length?c.map(r=>{
+      const ac=agentColor(r.agent);
+      return `<div class="crew-card"><div class="crew-chip" style="background:${ac.hex}"></div>`
+        +`<div class="crew-body"><div class="crew-role">${esc(ac.label)}</div>`
+        +`<div class="crew-task">${esc(r.task||"(内容不明)")}</div>`
+        +`<div class="crew-since">${esc(elapsed(r.since))}</div></div></div>`;
+    }).join(""):'<div class="empty">全クルー待機中</div>';
+  }catch(e){}
+}
+meta();tick();decisions();crews();setInterval(tick,3000);setInterval(decisions,5000);setInterval(crews,3000);
 async function closing(){
   try{
     const c=await(await fetch("/api/closing")).json();
@@ -172,9 +234,9 @@ async function closing(){
     $("sd-reasons").innerHTML=(sd.reasons&&sd.reasons.length)?sd.reasons.map(r=>"<li"+(blocking.has(r)?" style='color:#ff8080'":" style='color:var(--muted,#9aa)'")+">"+(blocking.has(r)?"⛔ ":"ℹ ")+esc(r)+"</li>").join(""):"<li class='none'>止める理由なし"+(sd.checked?"(判定 "+esc(sd.checked)+")":"")+"</li>";
     $("cl-date").textContent=c.date?("("+c.date+" "+(c.ts||"").slice(11,16)+")"):"";
     $("cl-done").innerHTML=(c.done&&c.done.length)?c.done.map(r=>"<tr><td>"+esc(r.area)+"</td><td>"+esc(r.result)+"</td><td>"+esc(r.where)+"</td></tr>").join(""):"<tr><td colspan='3' class='empty'>未登録</td></tr>";
-    $("cl-waiting").innerHTML=(c.waiting&&c.waiting.length)?c.waiting.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
-    $("cl-waiting-n").textContent=(c.waiting&&c.waiting.length)?c.waiting.length:"";
     $("cl-next").innerHTML=(c.next&&c.next.length)?c.next.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
+    closingWaiting=c.waiting||[];
+    renderDecisionPanes();
   }catch(e){}
 }
 closing();setInterval(closing,30000);
