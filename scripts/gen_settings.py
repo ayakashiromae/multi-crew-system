@@ -59,6 +59,15 @@ allow_rules = _rules("allow")
 # roster.coder が codex の拠点では、Codex(MCP)呼び出しの承認ダイアログを出さない(殿指示 2026-09-01)。
 if str(roster.get("coder") or "") == "codex":
     allow_rules = sorted(set(allow_rules) | {"mcp__codex__codex", "mcp__codex__codex-reply"})
+
+# .mcp.json は git 追跡外(プライベート化方針 2026-09-01)。roster.coder=codex の拠点で
+# 存在しなければ生成する(手動編集を尊重し、既存ファイルは上書きしない)。
+if str(roster.get("coder") or "") == "codex" and not os.path.exists(".mcp.json"):
+    with open(".mcp.json", "w", encoding="utf-8") as f:
+        json.dump({"mcpServers": {"codex": {"command": "codex", "args": [
+            "mcp-server", "-c", "approval_policy=never", "-c", "sandbox_mode=workspace-write",
+        ]}}}, f, ensure_ascii=False, indent=2)
+        f.write("\n")
 # force push はクルー共通の絶対禁止(CLAUDE.md)。identity で許可を広げても deny 側で必ず塞ぐ。
 deny_rules = sorted(set(_rules("deny")) | {"Bash(git push --force:*)", "Bash(git push -f:*)"})
 

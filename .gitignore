@@ -22,6 +22,9 @@ logs/
 # identity.yaml から自動生成される Claude Code ローカル設定
 .claude/settings.local.json
 
+# クルー実行環境の設定(プライベート化方針 2026-09-01。roster.coder=codex なら gen_settings.py が生成)
+.mcp.json
+
 dist/
 __pycache__/
 *.pyc
