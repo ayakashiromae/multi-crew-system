@@ -53,6 +53,18 @@ reasons=[]; ok=True
 # 1) GM が把握している稼働中クルー
 running=d.get("running",[])
 if running: ok=False; reasons.append(f"稼働中クルー {len(running)} 件: "+" / ".join(running))
+# 1b) hooks イベント由来の稼働中クルー(ダッシュボード「稼働中クルーチーム」と同じ判定)。
+#     GM が closing.md に書き忘れても、クルーが動いている間は「落としてよい」と言わない(殿指示 2026-09-03)。
+try:
+    import sys; sys.path.insert(0, os.path.join(root, "dashboard"))
+    from server import crews_status
+    live=[c for c in crews_status() if c.get("agent")]
+    if live:
+        ok=False
+        reasons.append(f"稼働中クルー(イベント検知) {len(live)} 件: "+" / ".join(f"{c['agent']}: {c.get('task') or '(内容不明)'}" for c in live[:4]))
+except Exception as e:
+    reasons.append(f"稼働中クルーのイベント検知に失敗({type(e).__name__})。稼働中の可能性を否定できない")
+    ok=False
 # 2) 最終ツールイベントからの経過(10 分未満なら作業中の可能性)
 ev=os.path.join(root,"state","events.jsonl"); last=None
 if os.path.exists(ev):

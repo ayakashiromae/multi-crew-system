@@ -89,6 +89,20 @@ start_voicevox() {
   fi
 }
 
+# GM セッションの権限モード(殿指示 2026-09-03: 権限 Accept 地獄をなくす)。
+#   bypass(既定) = 承認プロンプトなし。settings の deny ルールと secret guard hook はこのモードでも効く
+#                  (公式: Deny rules block in every mode, including bypassPermissions)。
+#   default      = 通常起動(Shift+Tab の循環に bypass を出すだけ)。
+#   auto / acceptEdits / plan = そのモードで起動(循環に bypass も出す)。
+# 上書きは環境変数 CREW_PERMISSION_MODE(.env に書いてもよい)。
+claude_perm_args() {
+  case "${CREW_PERMISSION_MODE:-bypass}" in
+    bypass) echo "--dangerously-skip-permissions" ;;
+    default) echo "--allow-dangerously-skip-permissions" ;;
+    *) echo "--permission-mode ${CREW_PERMISSION_MODE} --allow-dangerously-skip-permissions" ;;
+  esac
+}
+
 cmd_up() {
   cmd_sync
   if [ ! -f identity.yaml ]; then
@@ -103,10 +117,12 @@ cmd_up() {
   start_voicevox
   if command -v tmux >/dev/null 2>&1; then
     log "GMクルー起動 (デタッチ: Ctrl+b → d / 再接続: crew gm)"
-    exec tmux new-session -A -s "$SESSION" -c "$ROOT" claude
+    # shellcheck disable=SC2046
+    exec tmux new-session -A -s "$SESSION" -c "$ROOT" claude $(claude_perm_args)
   else
     warn "tmux なし: 直接 claude を起動します(デタッチ不可)"
-    exec claude
+    # shellcheck disable=SC2046
+    exec claude $(claude_perm_args)
   fi
 }
 
