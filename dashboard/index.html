@@ -235,7 +235,8 @@ async function closing(){
     $("cl-date").textContent=c.date?("("+c.date+" "+(c.ts||"").slice(11,16)+")"):"";
     $("cl-done").innerHTML=(c.done&&c.done.length)?c.done.map(r=>"<tr><td>"+esc(r.area)+"</td><td>"+esc(r.result)+"</td><td>"+esc(r.where)+"</td></tr>").join(""):"<tr><td colspan='3' class='empty'>未登録</td></tr>";
     $("cl-next").innerHTML=(c.next&&c.next.length)?c.next.map(x=>"<li>"+esc(x)+"</li>").join(""):"<li class='none'>なし</li>";
-    closingWaiting=c.waiting||[];
+    // 「なし(…)」は項目ではない(件数に数えない。旧 closing.json 互換のため描画側でも弾く)
+    closingWaiting=(c.waiting||[]).filter(x=>x&&!/^(なし|無し)(\b|[(（]|$)/.test(String(x).trim()));
     renderDecisionPanes();
   }catch(e){}
 }

@@ -23,6 +23,9 @@ for k in ("subagent_type", "description", "file_path", "command", "prompt"):
         break
 if not rec.get("detail") and d.get("prompt"):
     rec["detail"] = str(d["prompt"]).replace("\n", " ")[:160]
+# SessionStart は source(startup/resume/clear/compact)を控える(稼働中クルーの幽霊掃除の判定材料)
+if rec.get("event") == "SessionStart" and d.get("source"):
+    rec["detail"] = str(d["source"])[:40]
 # 稼働中クルー表示(タブ①)用: Task/Agent 呼び出しは agent(subagent_type)と task(description)を
 # 既存フィールドとは別に記録する(後方互換維持。この2フィールドが無い旧レコードも従来どおり動く)。
 if rec.get("tool") in ("Task", "Agent"):

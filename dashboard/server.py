@@ -64,6 +64,13 @@ def crews_status():
     spawn から2時間経過したものは無条件に稼働中から外す(保険)。"""
     open_spawns = []  # [{agent, task, since, agent_id}]
     for e in tail_events(3000):
+        # GM セッションの起動(startup/resume/clear)でそれ以前のクルーは全員消えている(この拠点の GM は
+        # tmux の 1 セッションだけ。前セッションが落ちると SubagentStop が来ないので幽霊カードになる)。
+        # compact は会話継続なのでクルーも生きている。detail 無しの旧レコードは起動扱い。
+        if e.get("event") == "SessionStart":
+            if str(e.get("detail", "")) != "compact":
+                open_spawns = []
+            continue
         if e.get("event") == "Tool" and e.get("tool") in ("Task", "Agent") and e.get("agent"):
             open_spawns.append({"agent": e["agent"], "task": e.get("task", ""), "since": e.get("ts", ""),
                                 "agent_id": e.get("agent_id", "")})

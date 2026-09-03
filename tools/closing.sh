@@ -26,10 +26,12 @@ def table(txt):
             if len(c)>=3: rows.append({"area":c[0],"result":c[1],"where":c[2]})
     return rows
 def bullets(txt):
-    return [re.sub(r"^\s*(?:\d+\.|[-*])\s*","",ln).strip() for ln in txt.splitlines() if re.match(r"^\s*(?:\d+\.|[-*])\s", ln)]
+    # 「なし」「なし(…)」「無し」「-」は項目ではない(件数に数えない。殿指示 2026-09-03)
+    out=[re.sub(r"^\s*(?:\d+\.|[-*])\s*","",ln).strip() for ln in txt.splitlines() if re.match(r"^\s*(?:\d+\.|[-*])\s", ln)]
+    return [b for b in out if b and not re.match(r"^(なし|無し|none|n/a|-|—)\b", b, re.I) and not re.match(r"^(なし|無し)[(（]", b)]
 data={"date":time.strftime("%Y-%m-%d"),"ts":time.strftime("%Y-%m-%dT%H:%M:%S"),
       "done":table(section("やったこと")),"waiting":bullets(section("殿待ち")),
-      "next":bullets(section("次に着手")),"running":[b for b in bullets(section("稼働中")) if b and b!="なし"]}
+      "next":bullets(section("次に着手")),"running":bullets(section("稼働中"))}
 old={}
 if os.path.exists(os.environ["FILE"]):
     try: old=json.load(open(os.environ["FILE"],encoding="utf-8"))
