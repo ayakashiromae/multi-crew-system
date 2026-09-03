@@ -62,23 +62,33 @@ def crews_status():
     最古 spawn を完了させ、識別が無い場合のみ全体 FIFO で近似する(異種クルーの並行時、完了順が
     起動順と違うと全体 FIFO は取り違えるため)。対応付けが取れているとは限らないので、
     spawn から2時間経過したものは無条件に稼働中から外す(保険)。"""
-    open_spawns = []  # [{agent, task, since}]
+    open_spawns = []  # [{agent, task, since, agent_id}]
     for e in tail_events(3000):
         if e.get("event") == "Tool" and e.get("tool") in ("Task", "Agent") and e.get("agent"):
-            open_spawns.append({"agent": e["agent"], "task": e.get("task", ""), "since": e.get("ts", "")})
+            open_spawns.append({"agent": e["agent"], "task": e.get("task", ""), "since": e.get("ts", ""),
+                                "agent_id": e.get("agent_id", "")})
         elif e.get("event") == "CrewDone":
             if not open_spawns:
                 continue
-            done_agent = e.get("agent")
+            done_id = e.get("agent_id", "")
+            done_agent = e.get("agent") or e.get("agent_type", "")
+            # 1) agent_id 一致が最優先(起動時に tool_response から控えた ID と突き合わせ)
+            if done_id and any(s["agent_id"] == done_id for s in open_spawns):
+                open_spawns[:] = [s for s in open_spawns if s["agent_id"] != done_id]
+                continue
+            # 2) agent_type 一致: 同種の最古 spawn を完了扱い
             if done_agent:
                 for i, s in enumerate(open_spawns):
                     if s["agent"] == done_agent:
                         open_spawns.pop(i)
                         break
-                else:
-                    open_spawns.pop(0)
-            else:
-                open_spawns.pop(0)
+                continue
+            # 3) 識別情報が乗っている(新形式)のに一致しない CrewDone は、auto モードの権限クラシ
+            #    ファイア等の内部エージェント由来(agent_type 空・30 秒おきに発火)なので無視する。
+            if done_id:
+                continue
+            # 4) 旧形式(識別情報なし)のみ全体 FIFO で近似
+            open_spawns.pop(0)
     now = datetime.now()
     fresh = []
     for s in open_spawns:

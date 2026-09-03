@@ -32,12 +32,31 @@ if rec.get("tool") in ("Task", "Agent"):
     task_v = ti.get("description") or ti.get("prompt")
     if task_v:
         rec["task"] = str(task_v).replace("\n", " ")[:160]
+    # PostToolUse の tool_response に "agentId: <hex>" が含まれる(非同期起動時)。CrewDone の
+    # agent_id と突き合わせるために控える。
+    import re
+    resp = d.get("tool_response")
+    try:
+        resp_s = resp if isinstance(resp, str) else json.dumps(resp, ensure_ascii=False)
+    except Exception:
+        resp_s = str(resp)
+    m = re.search(r"agentId:\s*([0-9a-f]{8,})", resp_s or "")
+    if m:
+        rec["agent_id"] = m.group(1)
 # SubagentStop(CrewDone)に将来 agent 識別情報が乗る場合に備えた同様の拾い上げ(現状のペイロードには
 # 通常含まれない。無ければ何も付与しない=best effort)。
 if rec.get("event") == "CrewDone":
-    agent_v = d.get("subagent_type") or ti.get("subagent_type") or d.get("agent_name")
+    agent_v = d.get("subagent_type") or ti.get("subagent_type") or d.get("agent_name") or d.get("agent_type")
     if agent_v:
         rec["agent"] = str(agent_v)[:80]
+    # SubagentStop payload の agent_id / agent_type を控える。auto モードの権限クラシファイア等の
+    # 内部エージェントは agent_type が空で頻発するため、server 側で識別不能な CrewDone は無視する。
+    for k in ("agent_id", "agent_type"):
+        if d.get(k):
+            rec[k] = str(d[k])[:80]
+# サブエージェント発のツールイベントにも agent_id が乗るなら残す(稼働中判定の材料)
+if d.get("agent_id") and "agent_id" not in rec:
+    rec["agent_id"] = str(d["agent_id"])[:80]
 with open(os.path.join(os.environ["ROOT"], "state", "events.jsonl"), "a", encoding="utf-8") as f:
     f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 PY
