@@ -1,14 +1,13 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(ffprobe *)",
+      "Bash(npm test)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(tools/decision.sh list)",
+      "Bash(tools/closing.sh status)"
+    ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./machines/**)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Read(**/secrets/**)",
-      "Read(**/*.pem)",
-      "Read(**/id_rsa*)",
       "Bash(rm -rf /)",
       "Bash(rm -rf /*)",
       "Bash(rm -rf /mnt/*)",

@@ -45,16 +45,26 @@ block() {
 
 SECRET_FILE_RE='(^|/)(\.env(\.[A-Za-z0-9_.-]+)?|machines/[^/]+\.env|[^/]*\.pem|id_rsa[^/]*|[^/]*\.p12|[^/]*\.pfx)$'
 SECRET_KEY_RE='(PASSWORD|PASSWD|_PASS|SECRET|TOKEN|API_?KEY|_KEY|CREDENTIAL|PRIVATE_KEY|WEBHOOK_URL)'
+SAFE_ENV_RE='(^|/)\.env\.(example|sample|template)$'
+DANGEROUS_PATH_RE='(^|/)(\.env(\.[A-Za-z0-9_.-]+)?|(machines|secrets)(/.*)?|[^/]*\.pem|id_rsa[^/]*|[^/]*\.p12|[^/]*\.pfx|[^/]*\.key)$'
+
+dangerous_path() {
+  local path="$1"
+  printf '%s' "$path" | grep -Eqi "$SAFE_ENV_RE" && return 1
+  printf '%s' "$path" | grep -Eqi "$DANGEROUS_PATH_RE"
+}
 BOUND='(^|[|;&[:space:]'"'"'"`(])'
 
 case "$tool" in
   Read)
-    [ -n "$fp" ] && printf '%s' "$fp" | grep -Eq "$SECRET_FILE_RE" && block "Read $fp"
+    [ -n "$fp" ] && dangerous_path "$fp" && block "Read $fp"
     ;;
   Bash)
     [ -z "$cmd" ] && exit 0
     # a) .env 系の内容表示
-    printf '%s' "$cmd" | grep -Eq "${BOUND}(cat|less|more|head|tail|bat|strings|nl|tac)[[:space:]]+[^|;&]*(\.env([[:space:]]|$|\.)|machines/[^[:space:]]*\.env)" && block "$cmd"
+    if ! printf '%s' "$cmd" | grep -Eq '^[[:space:]]*(cat|less|more|head|tail|bat|strings|nl|tac)[[:space:]]+([^[:space:]]*/)?\.env\.(example|sample|template)[[:space:]]*$'; then
+      printf '%s' "$cmd" | grep -Eq "${BOUND}(cat|less|more|head|tail|bat|strings|nl|tac)[[:space:]]+[^|;&]*(\.env([[:space:]]|$|\.)|machines/[^[:space:]]*\.env)" && block "$cmd"
+    fi
     # b) 秘密を解決して丸ごと出す config 系
     printf '%s' "$cmd" | grep -Eq "${BOUND}docker([[:space:]]+|-)compose[[:space:]]+([^|;&]*[[:space:]]+)?config([[:space:]]|$)" && block "$cmd"
     # c) 環境変数の無条件ダンプ
@@ -63,6 +73,18 @@ case "$tool" in
     printf '%s' "$cmd" | grep -Eq "${BOUND}(echo|printf)[[:space:]].*\\$\\{?[A-Za-z0-9_]*${SECRET_KEY_RE}" && block "$cmd"
     # e) grep で秘密キー行をそのまま出す(=KEY=VALUE 行の全文出力)
     printf '%s' "$cmd" | grep -Eq "${BOUND}(grep|rg|ag)[[:space:]].*${SECRET_KEY_RE}.*(\.env|machines/)" && block "$cmd"
+    # f) コマンド名を問わず、引数や埋め込みコード中の危険パスを簡易走査
+    env_probe=0
+    printf '%s' "$cmd" | grep -Eq '^[[:space:]]*test[[:space:]]+-f[[:space:]]+\.env[[:space:]]*$|^[[:space:]]*\[[[:space:]]+-f[[:space:]]+\.env[[:space:]]*\][[:space:]]*$' && env_probe=1
+    unquoted_cmd="$(printf '%s' "$cmd" | tr -d '\047\042\140')"
+    dangerous_path "$unquoted_cmd" && block "Bash command contains dangerous path after quote removal"
+    while IFS= read -r token || [ -n "$token" ]; do
+      [ -z "$token" ] && continue
+      token="$(printf '%s' "$token" | sed 's/[][{},.:;!?]*$//')"
+      [ -z "$token" ] && continue
+      [ "$env_probe" = 1 ] && [ "$token" = '.env' ] && continue
+      dangerous_path "$token" && block "Bash path token: $token"
+    done < <(printf '%s' "$unquoted_cmd" | tr '[:space:]' '\n' | tr '|\073&<>()' '\n')
     ;;
 esac
 exit 0
