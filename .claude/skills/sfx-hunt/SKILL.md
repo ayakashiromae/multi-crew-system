@@ -30,6 +30,12 @@ description: 動画制作用の効果音・BGM・画像・動画素材(フリー
 
 ## 捜索先(この順で優先)
 
+0. **手元の台帳を最初に検索する**(外部に取りに行く前に必ず):
+   `python3 ~/dev/sandbox/asset-catalog/search.py <キーワード…> [--site irasutoya|minchirie|pakutaso|windorf|ytsozaiyasan|bgm|sfx]`
+   いらすとや全件(25,352)・みんちりえ・ぱくたそ・YouTuber素材屋・BGM 5 サイト・効果音ラボ(434+89 本、実ファイルは
+   `~/dev/sandbox/skatto2ch-trial/assets/sfx_lib/` に保存済み)を横断検索できる。台帳に無い/足りない場合だけ下記へ。
+   windorf は商用不可なので有償案件では使わない。
+
 効果音・BGM:
 
 1. 効果音ラボ (soundeffect-lab.info) — 商用可・クレジット不要。直リンクDL可
