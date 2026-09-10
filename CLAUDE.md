@@ -91,7 +91,7 @@
 
 | 段階 | 内容 |
 |---|---|
-| 絶対禁止 | `rm -rf /` 系・プロジェクト外への `rm -rf`・`git push --force`(`--force-with-lease` 以外)・`git reset --hard`/`git clean -f`・`sudo`/`su`・`kill`/`pkill`/`tmux kill-*`・`mkfs`/`dd`・`curl \| sh` |
+| 絶対禁止 | `rm -rf /` 系・プロジェクト外への `rm -rf`・変数を含むパスへの `rm`(`rm -f "$OUT/$b"/*.png` 等。一時ファイルは一意ディレクトリに書いて消さない)・`git push --force`(`--force-with-lease` 以外)・`git reset --hard`/`git clean -f`・`sudo`/`su`・`kill`/`pkill`/`tmux kill-*`・`mkfs`/`dd`・`curl \| sh` |
 | 止まって報告 | 10ファイル超の削除・プロジェクト外の変更・未知URLへの通信・破壊的か判断がつかない操作 |
 | 安全既定 | `git stash`→`reset` / `git clean -n` で確認 / 削除は `_trash/` へ移動 / 30ファイル超の一括書き込みは分割 |
 
