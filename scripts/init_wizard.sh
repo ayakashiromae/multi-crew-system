@@ -132,7 +132,8 @@ ask P_OUTBOX "  成果物レビュー用" "~/crew-out/review"
 ask P_SHOTS  "  スクリーンショット" "~/crew-out/shots"
 ask P_WS     "  開発サンドボックス" "~/dev/sandbox"
 ask P_READ   "  読み取り許可フォルダ(カンマ区切り)" "~/dev"
-mkdir -p "$(expand_tilde "$P_OUTBOX")" "$(expand_tilde "$P_SHOTS")" "$(expand_tilde "$P_WS")"
+ask P_FB     "  フィードバックノート置き場(クルーから殿への質問 md。Obsidian 等、殿が普段読む場所)" "~/crew-out/review/feedback"
+mkdir -p "$(expand_tilde "$P_OUTBOX")" "$(expand_tilde "$P_SHOTS")" "$(expand_tilde "$P_WS")" "$(expand_tilde "$P_FB")"
 
 # ---- [5] テーマ ----------------------------------------------------
 echo ""
@@ -160,6 +161,7 @@ ensure_ignored identity.yaml
   echo "  outbox: ${P_OUTBOX}"
   echo "  screenshots: ${P_SHOTS}"
   echo "  workspace: ${P_WS}"
+  echo "  feedback_notes: ${P_FB}"
   echo "  readable:"
   echo "$P_READ" | tr ',' '\n' | sed 's/^ *//; s/ *$//; /^$/d; s/^/    - /'
   echo "theme: ${THEME}"

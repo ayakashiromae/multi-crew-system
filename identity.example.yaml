@@ -21,6 +21,7 @@ paths:
   outbox: ~/crew-out/review      # レビューしてほしい成果物の置き場
   screenshots: ~/crew-out/shots  # スクリーンショットの排出先
   workspace: ~/dev/sandbox       # クルーが新規作成してよいフォルダ
+  feedback_notes: ~/crew-out/review/feedback  # クルーから殿への質問 md(フィードバックノート)。Obsidian 等、殿が普段読む場所を指定
   readable:                      # クルーが読み取ってよいフォルダ一覧
     - ~/dev
 

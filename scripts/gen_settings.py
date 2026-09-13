@@ -39,6 +39,7 @@ outbox = ex(paths.get("outbox", "~/crew-out/review"))
 shots = ex(paths.get("screenshots", "~/crew-out/shots"))
 workspace = ex(paths.get("workspace", "~/dev/sandbox"))
 readable = [ex(p) for p in (paths.get("readable") or [])]
+feedback = ex(paths["feedback_notes"]) if paths.get("feedback_notes") else ""
 
 for d in [outbox, shots, workspace, "state", "logs"]:
     if d:
@@ -73,7 +74,7 @@ deny_rules = sorted(set(_rules("deny")) | {"Bash(git push --force:*)", "Bash(git
 
 settings = {
     "permissions": {
-        "additionalDirectories": sorted(set([outbox, shots, workspace] + readable)),
+        "additionalDirectories": sorted(set([outbox, shots, workspace] + readable + ([feedback] if feedback else []))),
         **({"allow": allow_rules} if allow_rules else {}),
         "deny": deny_rules,
     },
@@ -81,6 +82,7 @@ settings = {
         "CREW_OUTBOX": outbox,
         "CREW_SCREENSHOTS": shots,
         "CREW_WORKSPACE": workspace,
+        "CREW_FEEDBACK_NOTES": feedback,
         "CREW_NOTIFY": "1" if notify else "0",
         "CREW_THEME": theme,
         "CREW_WORKER_FLAVOR": worker_flavor,
@@ -122,6 +124,7 @@ lines.append("## パス定義")
 lines.append(f"- 成果物レビュー用(outbox): {outbox}")
 lines.append(f"- スクリーンショット排出先: {shots}")
 lines.append(f"- 新規作成してよいフォルダ(workspace): {workspace}")
+lines.append(f"- フィードバックノート置き場(クルーから殿への質問 md): {feedback if feedback else '未設定 → 殿に置き場を聞いてから使うこと'}")
 lines.append("- 読み取り許可フォルダ:")
 for p in readable:
     lines.append(f"  - {p}")
